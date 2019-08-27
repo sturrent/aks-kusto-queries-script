@@ -1,5 +1,5 @@
 # aks-kusto-queries-script
-Bash script to generate the must common kusto queries from a cluster URI
+Bash script to generate the must common kusto queries from a cluster URI.
 The script generates a .kql file with the common kusto queries for the cluster
 
 ```
