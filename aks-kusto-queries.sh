@@ -194,6 +194,13 @@ cluster(\"Armprod\").database(\"ARMProd\").HttpOutgoingRequests
 | summarize count() by hostName 
 | order by count_ desc
 
+// cluster autoscaler operations
+union cluster(\"Aks\").database(\"AKSccplogs\").ControlPlaneEvents, cluster(\"Aks\").database(\"AKSccplogs\").ControlPlaneEventsNonShoebox
+| where TIMESTAMP >= now(-1d)
+| where namespace == \"insertnamespace\" // get it from ETCD logs in jarvis
+| where category contains \"cluster-autoscaler\"
+| project PreciseTimeStamp, category, log=tostring(parse_json(properties).log)
+
 cluster(\"Aks\").database(\"AKSprod\").AsyncQoSEvents | sample 10\n" > ${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
 
 printf "\nKusto queries for the cluster have been save in:\n\t${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
