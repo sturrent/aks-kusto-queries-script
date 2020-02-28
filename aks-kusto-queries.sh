@@ -173,7 +173,7 @@ cluster(\"aks\").database(\"AKSprod\").BlackboxMonitoringActivity
 // | render timeline     
 
 // 429 throttling (incoming requests)
-cluster("Armprod").database("ARMProd").HttpIncomingRequests
+cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
 | where subscriptionId  == \"$SUBSCRIPTION_ID\"  
 | where TIMESTAMP >= now(-2d)  
 | where httpStatusCode == 429  
@@ -181,13 +181,13 @@ cluster("Armprod").database("ARMProd").HttpIncomingRequests
 | order by count_ desc
 
 // 429 throttling (all operations)
-cluster("Armprod").database("ARMProd").HttpIncomingRequests
+cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
 | where subscriptionId  == \"$SUBSCRIPTION_ID\"                   
 | where TIMESTAMP >= now(-2d)  
 | where httpStatusCode != -1
 
 // 429 throttling (outgoing requests)
-cluster("Armprod").database("ARMProd").HttpOutgoingRequests
+cluster(\"Armprod\").database(\"ARMProd\").HttpOutgoingRequests
 | where subscriptionId  == \"$SUBSCRIPTION_ID\"
 | where TIMESTAMP >= now(-2d)  
 | where httpStatusCode == 429 
