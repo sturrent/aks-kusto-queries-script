@@ -171,6 +171,29 @@ cluster(\"aks\").database(\"AKSprod\").BlackboxMonitoringActivity
 | project PreciseTimeStamp, state, provisioningState, reason, agentNodeCount, msg, resourceGroupName, resourceName, underlayName 
 | order by PreciseTimeStamp asc
 // | render timeline     
+
+// 429 throttling (incoming requests)
+cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
+| where subscriptionId  == \"$SUBSCRIPTION_ID\"  
+| where TIMESTAMP >= now(-2d)  
+| where httpStatusCode == 429  
+| summarize count() by bin(TIMESTAMP, 1d), operationName, clientApplicationId, clientIpAddress 
+| order by count_ desc
+
+// 429 throttling (all operations)
+cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
+| where subscriptionId  == \"$SUBSCRIPTION_ID\"                   
+| where TIMESTAMP >= now(-2d)  
+| where httpStatusCode != -1
+
+// 429 throttling (outgoing requests)
+cluster(\"Armprod\").database(\"ARMProd\").HttpOutgoingRequests
+| where subscriptionId  == \"$SUBSCRIPTION_ID\"
+| where TIMESTAMP >= now(-2d)  
+| where httpStatusCode == 429 
+| summarize count() by hostName 
+| order by count_ desc
+
 cluster(\"Aks\").database(\"AKSprod\").AsyncQoSEvents | sample 10\n" > ${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
 
 printf "\nKusto queries for the cluster have been save in:\n\t${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
