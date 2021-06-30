@@ -170,6 +170,7 @@ cluster(\"aks\").database(\"AKSprod\").BlackboxMonitoringActivity
 | where state != \"Healthy\"
 | project PreciseTimeStamp, state, provisioningState, reason, agentNodeCount, msg, resourceGroupName, resourceName, underlayName 
 | order by PreciseTimeStamp asc
+<<<<<<< HEAD
 // | render timeline
 
 // Remediator events
@@ -198,6 +199,38 @@ union cluster('Aks').database('AKSccplogs').ControlPlaneEvents, cluster('Aks').d
 | extend podCondStatus = tostring(podCond.status) | extend podCondReason = tostring(podCond.reason)
 | extend podCondMessage = tostring(podCond.message)
 | project PreciseTimeStamp, requestURI, verb, user, podCondType, podCondStatus, podCondReason, podCondMessage, Log
+=======
+// | render timeline     
+
+// 429 throttling (incoming requests)
+cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
+| where subscriptionId  == \"$SUBSCRIPTION_ID\"  
+| where TIMESTAMP >= now(-2d)  
+| where httpStatusCode == 429  
+| summarize count() by bin(TIMESTAMP, 1d), operationName, clientApplicationId, clientIpAddress 
+| order by count_ desc
+
+// 429 throttling (all operations)
+cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
+| where subscriptionId  == \"$SUBSCRIPTION_ID\"                   
+| where TIMESTAMP >= now(-2d)  
+| where httpStatusCode != -1
+
+// 429 throttling (outgoing requests)
+cluster(\"Armprod\").database(\"ARMProd\").HttpOutgoingRequests
+| where subscriptionId  == \"$SUBSCRIPTION_ID\"
+| where TIMESTAMP >= now(-2d)  
+| where httpStatusCode == 429 
+| summarize count() by hostName 
+| order by count_ desc
+
+// cluster autoscaler operations
+union cluster(\"Aks\").database(\"AKSccplogs\").ControlPlaneEvents, cluster(\"Aks\").database(\"AKSccplogs\").ControlPlaneEventsNonShoebox
+| where TIMESTAMP >= now(-1d)
+| where namespace == \"insertnamespace\" // get it from ETCD logs in jarvis
+| where category contains \"cluster-autoscaler\"
+| project PreciseTimeStamp, category, log=tostring(parse_json(properties).log)
+>>>>>>> 3aa808837cae64f38944f4f672957342187d875d
 
 cluster(\"Aks\").database(\"AKSprod\").AsyncQoSEvents | sample 10\n" > ${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
 
