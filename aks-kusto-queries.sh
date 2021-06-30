@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# v0.2.3
+# v0.2.4
 # Script to generate kusto file with common queries for a cluster
 # The .kql file is created inside the aks-kusto-queries directory
 # sergio.turrent@microsoft.com
@@ -35,19 +35,19 @@ RESOURCE_NAME=$(echo $URI_STRING | awk -F'/' '{print $NF}')
 
 printf "\n// Here’s are ALL the errors/messages for the AKS clusters in the resource group in the past 90 days -
 union cluster(\"Aks\").database(\"AKSprod\").FrontEndContextActivity, cluster(\"Aks\").database(\"AKSprod\").AsyncContextActivity
-| where subscriptionID contains \"$SUBSCRIPTION_ID\"
-| where resourceName contains \"$RESOURCE_NAME\"
+| where subscriptionID has \"$SUBSCRIPTION_ID\"
+| where resourceName has \"$RESOURCE_NAME\"
 | where level != \"info\"
-| where PreciseTimeStamp > ago(90d)
+| where PreciseTimeStamp > ago(9d)
 | project PreciseTimeStamp, operationID, correlationID, level, suboperationName, msg
 
 
 // Here’s are the recent scale/upgrade operations – 
 union cluster(\"Aks\").database(\"AKSprod\").FrontEndContextActivity, cluster(\"Aks\").database(\"AKSprod\").AsyncContextActivity
-| where subscriptionID contains \"$SUBSCRIPTION_ID\"
-| where resourceName contains \"$RESOURCE_NAME\"
+| where subscriptionID has \"$SUBSCRIPTION_ID\"
+| where resourceName has \"$RESOURCE_NAME\"
 | where msg contains \"intent\" or msg contains \"Upgrading\" or msg contains \"Successfully upgraded cluster\" or msg contains \"Operation succeeded\" or msg contains \"validateAndUpdateOrchestratorProfile\" // or msg contains \"unique pods in running state\"
-| where PreciseTimeStamp > ago(90d)
+| where PreciseTimeStamp > ago(9d)
 | project PreciseTimeStamp, operationID, correlationID, level, suboperationName, msg
 
 // Shows the scale errors/messages for an AKS cluster using the operationID from the previous query
@@ -83,7 +83,7 @@ cluster(\"aks\").database(\"AKSprod\").BlackboxMonitoringActivity
 // Find Errors reported by ARM Failed - Deleted - Created 
 cluster(\"ARMProd\").database(\"ARMProd\").EventServiceEntries 
 | where subscriptionId == \"$SUBSCRIPTION_ID\"
-| where resourceUri contains \"$RESOURCE_NAME\"
+| where resourceUri has \"$RESOURCE_NAME\"
 | where TIMESTAMP > ago(3d)
 | where status == \"Failed\" 
 | project PreciseTimeStamp, correlationId , operationId, operationName, properties
@@ -92,7 +92,7 @@ cluster(\"ARMProd\").database(\"ARMProd\").EventServiceEntries
 cluster(\"ARMProd\").database(\"ARMProd\").HttpOutgoingRequests
 | where httpMethod != \"GET\"
 | where TIMESTAMP > ago(1d)
-| where targetUri contains \"$RESOURCE_NAME\"// and targetUri contains \"$SUBSCRIPTION_ID\"
+| where targetUri has \"$RESOURCE_NAME\" // and targetUri has \"$SUBSCRIPTION_ID\"
 | project TIMESTAMP, ActivityId, serviceRequestId , clientRequestId, failureCause, httpMethod , operationName, targetUri
 
 //  Use the activityID from the previous query.
@@ -100,14 +100,14 @@ cluster(\"Azcrp\").database(\"crp_allprod\").ContextActivity
 | where TIMESTAMP between (datetime(2018-08-17T07:57Z)..datetime(2018-08-17T09:28Z)) 
 | where subscriptionId == \"$SUBSCRIPTION_ID\"
 // | where activityId == \"3817a3d4-7045-4db5-bc7f-45dbffe2166a\" 
-// | where message contains \"$RESOURCE_NAME\"
+// | where message has \"$RESOURCE_NAME\"
 // | where PreciseTimeStamp > ago(3d) // datetime(2018-07-31)
 | project PreciseTimeStamp, activityId, traceLevel, message
 
 // claims name shows WHO requested or performed the action
 cluster(\"ARMProd\").database(\"ARMProd\").EventServiceEntries 
 | where subscriptionId == \"$SUBSCRIPTION_ID\"
-| where resourceUri contains \"$RESOURCE_NAME\"
+| where resourceUri has \"$RESOURCE_NAME\"
 // | where claims contains \"1d78a85d-813d-46f0-b496-dd72f50a3ec0\"
 // | where ActivityId == \"3817a3d4-7045-4db5-bc7f-45dbffe2166a\"
 // | where operationName contains \"delete\"
@@ -120,7 +120,7 @@ cluster(\"ARMProd\").database(\"ARMProd\").EventServiceEntries
 // Get the PUT operation. This query also shows the command used (aks get-credentials, browse, scale, show, create)
 cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
 | where subscriptionId == \"$SUBSCRIPTION_ID\" 
-| where targetUri contains \"$RESOURCE_NAME\"
+| where targetUri has \"$RESOURCE_NAME\"
 // | where authorizationAction contains \"write\" or authorizationAction contains \"delete\"
 | where commandName contains \"aks\" and httpMethod == \"PUT\" 
 | where PreciseTimeStamp > ago(3d) 
@@ -129,15 +129,15 @@ cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
 // Get the PUT operation
 cluster(\"Armprod\").database(\"ARMProd\").HttpIncomingRequests
 | where subscriptionId == \"$SUBSCRIPTION_ID\"
-| where targetUri contains \"$RESOURCE_NAME\" and authorizationAction contains \"Clusters\"
+| where targetUri has \"$RESOURCE_NAME\" and authorizationAction contains \"Clusters\"
 | where httpMethod == \"PUT\"
 | where PreciseTimeStamp > ago(3d) // between (datetime(2018-07-16) .. datetime(2018-07-20))
 | project TIMESTAMP,  commandName , serviceRequestId , httpMethod  , authorizationAction , operationName
 
 // 
 cluster(\"Aks\").database(\"AKSprod\").FrontEndQoSEvents
-| where subscriptionID contains \"$SUBSCRIPTION_ID\"
-| where resourceName contains \"$RESOURCE_NAME\"
+| where subscriptionID has \"$SUBSCRIPTION_ID\"
+| where resourceName has \"$RESOURCE_NAME\"
 // | where operationName !contains \"delete\"
 | where PreciseTimeStamp > ago(3d)
 // feature-gates will be broken when upgrading to 1.11.0+ Please code all cases against - 2835281 - for this issue (also added in the wiki)
@@ -170,7 +170,35 @@ cluster(\"aks\").database(\"AKSprod\").BlackboxMonitoringActivity
 | where state != \"Healthy\"
 | project PreciseTimeStamp, state, provisioningState, reason, agentNodeCount, msg, resourceGroupName, resourceName, underlayName 
 | order by PreciseTimeStamp asc
-// | render timeline     
+// | render timeline
+
+// Remediator events
+database("AKSprod").RemediatorEvent
+| where subscriptionID has \"$SUBSCRIPTION_ID\"  and remediation contains \"restart\"
+| where PreciseTimeStamp > ago (10d)
+//| where TIMESTAMP between (datetime(2021-01-12T00:57Z)..datetime(2021-02-16T20:28Z))
+| project PreciseTimeStamp,level,msg,reason,['state'],remediation
+
+// Kube api audit logs
+union cluster('Aks').database('AKSccplogs').ControlPlaneEvents, cluster('Aks').database('AKSccplogs').ControlPlaneEventsNonShoebox
+//| where PreciseTimeStamp between (datetime(2020-11-11)..2d)
+| where PreciseTimeStamp > ago(1h)
+| where resourceId has \"$SUBSCRIPTION_ID\" and resourceId has \"$RESOURCE_NAME\"
+| where category == 'kube-audit'
+| extend Pod = extractjson('$.pod', properties, typeof(string))
+| extend Log = extractjson('$.log', properties , typeof(string))
+| extend _jlog = parse_json(Log)
+| extend requestURI = tostring(_jlog.requestURI)
+| extend verb = tostring(_jlog.verb)
+| extend user = tostring(_jlog.user.username)
+// | where verb !in ('get', 'list', 'watch')
+//| where properties contains '/pods/'
+//| where properties has '<NAME_OF _THE_POD>'
+| mv-expand podCond = _jlog.requestObject.status.conditions | extend ownerType = tostring(_jlog.requestObject.metadata.ownerReferences[0].kind) | extend ownerName = tostring(_jlog.requestObject.metadata.ownerReferences[0].name) | extend podCondType = tostring(podCond.type)
+| extend podCondStatus = tostring(podCond.status) | extend podCondReason = tostring(podCond.reason)
+| extend podCondMessage = tostring(podCond.message)
+| project PreciseTimeStamp, requestURI, verb, user, podCondType, podCondStatus, podCondReason, podCondMessage, Log
+
 cluster(\"Aks\").database(\"AKSprod\").AsyncQoSEvents | sample 10\n" > ${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
 
 printf "\nKusto queries for the cluster have been save in:\n\t${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
