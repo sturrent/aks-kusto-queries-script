@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# v0.2.4
+# v0.2.5
 # Script to generate kusto file with common queries for a cluster
 # The .kql file is created inside the aks-kusto-queries directory
 # sergio.turrent@microsoft.com
@@ -170,18 +170,17 @@ cluster(\"aks\").database(\"AKSprod\").BlackboxMonitoringActivity
 | where state != \"Healthy\"
 | project PreciseTimeStamp, state, provisioningState, reason, agentNodeCount, msg, resourceGroupName, resourceName, underlayName 
 | order by PreciseTimeStamp asc
-<<<<<<< HEAD
 // | render timeline
 
 // Remediator events
-database("AKSprod").RemediatorEvent
+database(\"AKSprod\").RemediatorEvent
 | where subscriptionID has \"$SUBSCRIPTION_ID\"  and remediation contains \"restart\"
 | where PreciseTimeStamp > ago (10d)
 //| where TIMESTAMP between (datetime(2021-01-12T00:57Z)..datetime(2021-02-16T20:28Z))
 | project PreciseTimeStamp,level,msg,reason,['state'],remediation
 
 // Kube api audit logs
-union cluster('Aks').database('AKSccplogs').ControlPlaneEvents, cluster('Aks').database('AKSccplogs').ControlPlaneEventsNonShoebox
+union cluster(\'Aks\').database(\'AKSccplogs\').ControlPlaneEvents, cluster(\'Aks\').database(\'AKSccplogs\').ControlPlaneEventsNonShoebox
 //| where PreciseTimeStamp between (datetime(2020-11-11)..2d)
 | where PreciseTimeStamp > ago(1h)
 | where resourceId has \"$SUBSCRIPTION_ID\" and resourceId has \"$RESOURCE_NAME\"
@@ -199,7 +198,7 @@ union cluster('Aks').database('AKSccplogs').ControlPlaneEvents, cluster('Aks').d
 | extend podCondStatus = tostring(podCond.status) | extend podCondReason = tostring(podCond.reason)
 | extend podCondMessage = tostring(podCond.message)
 | project PreciseTimeStamp, requestURI, verb, user, podCondType, podCondStatus, podCondReason, podCondMessage, Log
-=======
+
 // | render timeline     
 
 // 429 throttling (incoming requests)
@@ -230,7 +229,6 @@ union cluster(\"Aks\").database(\"AKSccplogs\").ControlPlaneEvents, cluster(\"Ak
 | where namespace == \"insertnamespace\" // get it from ETCD logs in jarvis
 | where category contains \"cluster-autoscaler\"
 | project PreciseTimeStamp, category, log=tostring(parse_json(properties).log)
->>>>>>> 3aa808837cae64f38944f4f672957342187d875d
 
 cluster(\"Aks\").database(\"AKSprod\").AsyncQoSEvents | sample 10\n" > ${SCRIPT_PATH}/aks-kusto-queries/MC_${RESOURCEGROUP_NAME}_${RESOURCE_NAME}.kql
 
