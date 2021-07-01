@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# v0.2.5
+# v0.2.5 
+# 20210701
 # Script to generate kusto file with common queries for a cluster
 # The .kql file is created inside the aks-kusto-queries directory
 # sergio.turrent@microsoft.com
